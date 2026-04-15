@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Export Cruise JSON</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 24px;
+    }
+    button {
+      padding: 12px 18px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 16px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Export Cruise JSON</h2>
+<p>Click the button below to export the last 7 days of Cruise Control Active data.</p>
+
+<button id="exportBtn">Save Cruise JSON</button>
+
+<div id="status"></div>
+
+<script>
+let apiRef = null;
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+async function exportJson() {
+  try {
+    setStatus("Requesting data from Geotab...");
+
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 7);
+
+    const toDate = new Date();
+
+    const result = await apiRef.call("Get", {
+      typeName: "StatusData",
+      search: {
+        diagnosticSearch: {
+          id: "DiagnosticCruiseControlActiveId"
+        },
+        fromDate: fromDate.toISOString(),
+        toDate: toDate.toISOString()
+      },
+      resultsLimit: 5000
+    });
+
+    setStatus("Opening Save dialog...");
+
+    const blob = new Blob(
+      [JSON.stringify(result, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cruise_status_7days.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    setStatus("Download started. You can now refresh Power BI.");
+
+  } catch (err) {
+    console.error(err);
+    setStatus("Error: " + err.message);
+  }
+}
+
+window.geotab = window.geotab || {};
+window.geotab.addin = window.geotab.addin || {};
+
+window.geotab.addin.exportCruisePage = function () {
+  return {
+    initialize: function (api, state, callback) {
+      apiRef = api;
+      callback();
+
+      setTimeout(() => {
+        document
+          .getElementById("exportBtn")
+          .addEventListener("click", exportJson);
+      }, 0);
+    },
+    focus: function () {},
+    blur: function () {}
+  };
+};
+</script>
+
+</body>
+</html>
