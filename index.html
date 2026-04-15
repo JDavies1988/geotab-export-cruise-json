@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Export Cruise JSON</title>
+  <title>Export Fleet JSON</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,6 +12,7 @@
       padding: 12px 18px;
       font-size: 14px;
       cursor: pointer;
+      margin-top: 12px;
     }
     #status {
       margin-top: 16px;
@@ -21,10 +22,10 @@
 </head>
 <body>
 
-<h2>Export Cruise JSON</h2>
-<p>Click the button below to export the last 7 days of Cruise Control Active data.</p>
+<h2>Export Fleet JSON</h2>
+<p>Click the button below to export the last 7 days of cruise and coast input data for Power BI.</p>
 
-<button id="exportBtn">Save Cruise JSON</button>
+<button id="exportAllBtn">Save Fleet JSON</button>
 
 <div id="status"></div>
 
@@ -35,7 +36,35 @@ function setStatus(msg) {
   document.getElementById("status").textContent = msg;
 }
 
-async function exportJson() {
+function downloadJson(filename, data) {
+  const blob = new Blob(
+    [JSON.stringify(data, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function getStatusData(diagnosticId, fromDate, toDate, resultsLimit = 5000) {
+  return await apiRef.call("Get", {
+    typeName: "StatusData",
+    search: {
+      diagnosticSearch: {
+        id: diagnosticId
+      },
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString()
+    },
+    resultsLimit: resultsLimit
+  });
+}
+
+async function exportAllJson() {
   try {
     setStatus("Requesting data from Geotab...");
 
@@ -44,36 +73,32 @@ async function exportJson() {
 
     const toDate = new Date();
 
-    const result = await apiRef.call("Get", {
-      typeName: "StatusData",
-      search: {
-        diagnosticSearch: {
-          id: "DiagnosticCruiseControlActiveId"
-        },
-        fromDate: fromDate.toISOString(),
-        toDate: toDate.toISOString()
-      },
-      resultsLimit: 5000
-    });
+    const [
+      cruiseControlActive,
+      roadSpeed,
+      instantaneousFuelRate,
+      ignition
+    ] = await Promise.all([
+      getStatusData("DiagnosticCruiseControlActiveId", fromDate, toDate, 5000),
+      getStatusData("DiagnosticEngineRoadSpeedId", fromDate, toDate, 5000),
+      getStatusData("DiagnosticInstantaneousFuelRateId", fromDate, toDate, 5000),
+      getStatusData("DiagnosticIgnitionId", fromDate, toDate, 5000)
+    ]);
 
-    setStatus("Opening Save dialog...");
+    const result = {
+      exportedAt: new Date().toISOString(),
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString(),
+      diagnostics: {
+        cruiseControlActive: cruiseControlActive,
+        roadSpeed: roadSpeed,
+        instantaneousFuelRate: instantaneousFuelRate,
+        ignition: ignition
+      }
+    };
 
-    const blob = new Blob(
-      [JSON.stringify(result, null, 2)],
-      { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "cruise_status_7days.json";
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-    setStatus("Download started. You can now refresh Power BI.");
-
+    downloadJson("fleet_inputs_7days.json", result);
+    setStatus("Download started. Save the file, then refresh Power BI.");
   } catch (err) {
     console.error(err);
     setStatus("Error: " + err.message);
@@ -90,9 +115,10 @@ window.geotab.addin.exportCruisePage = function () {
       callback();
 
       setTimeout(() => {
-        document
-          .getElementById("exportBtn")
-          .addEventListener("click", exportJson);
+        const btn = document.getElementById("exportAllBtn");
+        if (btn) {
+          btn.addEventListener("click", exportAllJson);
+        }
       }, 0);
     },
     focus: function () {},
