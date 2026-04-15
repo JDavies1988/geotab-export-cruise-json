@@ -76,13 +76,13 @@ async function exportAllJson() {
     const [
       cruiseControlActive,
       roadSpeed,
-      instantaneousFuelRate,
-      ignition
+      ignition,
+      brakePedalOn
     ] = await Promise.all([
       getStatusData("DiagnosticCruiseControlActiveId", fromDate, toDate, 5000),
       getStatusData("DiagnosticEngineRoadSpeedId", fromDate, toDate, 5000),
-      getStatusData("DiagnosticInstantaneousFuelRateId", fromDate, toDate, 5000),
-      getStatusData("DiagnosticIgnitionId", fromDate, toDate, 5000)
+      getStatusData("DiagnosticIgnitionId", fromDate, toDate, 5000),
+      getStatusData("DiagnosticBrakePedalOnId", fromDate, toDate, 5000)
     ]);
 
     const result = {
@@ -92,8 +92,8 @@ async function exportAllJson() {
       diagnostics: {
         cruiseControlActive: cruiseControlActive,
         roadSpeed: roadSpeed,
-        instantaneousFuelRate: instantaneousFuelRate,
-        ignition: ignition
+        ignition: ignition,
+        brakePedalOn: brakePedalOn
       }
     };
 
