@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Export Fleet JSON</title>
+  <title>Export Cruise JSON</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,10 +22,10 @@
 </head>
 <body>
 
-<h2>Export Fleet JSON</h2>
-<p>Click the button below to export the last 7 days of cruise and coast input data for Power BI.</p>
+<h2>Export Cruise JSON</h2>
+<p>Click the button below to export the last 7 days of cruise control active data for Power BI.</p>
 
-<button id="exportAllBtn">Save Fleet JSON</button>
+<button id="exportCruiseBtn">Save Cruise JSON</button>
 
 <div id="status"></div>
 
@@ -64,40 +64,23 @@ async function getStatusData(diagnosticId, fromDate, toDate, resultsLimit = 5000
   });
 }
 
-async function exportAllJson() {
+async function exportCruiseJson() {
   try {
-    setStatus("Requesting data from Geotab...");
+    setStatus("Requesting cruise data from Geotab...");
 
     const fromDate = new Date();
     fromDate.setDate(fromDate.getDate() - 7);
 
     const toDate = new Date();
 
-    const [
-      cruiseControlActive,
-      roadSpeed,
-      ignition,
-      brakePedalOn
-    ] = await Promise.all([
-      getStatusData("DiagnosticCruiseControlActiveId", fromDate, toDate, 5000),
-      getStatusData("DiagnosticEngineRoadSpeedId", fromDate, toDate, 5000),
-      getStatusData("DiagnosticIgnitionId", fromDate, toDate, 5000),
-      getStatusData("DiagnosticBrakePedalOnId", fromDate, toDate, 5000)
-    ]);
+    const cruiseControlActive = await getStatusData(
+      "DiagnosticCruiseControlActiveId",
+      fromDate,
+      toDate,
+      5000
+    );
 
-    const result = {
-      exportedAt: new Date().toISOString(),
-      fromDate: fromDate.toISOString(),
-      toDate: toDate.toISOString(),
-      diagnostics: {
-        cruiseControlActive: cruiseControlActive,
-        roadSpeed: roadSpeed,
-        ignition: ignition,
-        brakePedalOn: brakePedalOn
-      }
-    };
-
-    downloadJson("fleet_inputs_7days.json", result);
+    downloadJson("cruise_status_7days.json", cruiseControlActive);
     setStatus("Download started. Save the file, then refresh Power BI.");
   } catch (err) {
     console.error(err);
@@ -115,9 +98,9 @@ window.geotab.addin.exportCruisePage = function () {
       callback();
 
       setTimeout(() => {
-        const btn = document.getElementById("exportAllBtn");
+        const btn = document.getElementById("exportCruiseBtn");
         if (btn) {
-          btn.addEventListener("click", exportAllJson);
+          btn.addEventListener("click", exportCruiseJson);
         }
       }, 0);
     },
