@@ -68,10 +68,16 @@ async function exportCruiseJson() {
   try {
     setStatus("Requesting cruise data from Geotab...");
 
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 7);
+    const now = new Date();
 
-    const toDate = new Date();
+// Start of 7 days ago
+const fromDate = new Date(now);
+fromDate.setDate(fromDate.getDate() - 7);
+fromDate.setHours(0, 0, 0, 0);
+
+// End of today
+const toDate = new Date(now);
+toDate.setHours(23, 59, 59, 999);
 
     const cruiseControlActive = await getStatusData(
       "DiagnosticCruiseControlActiveId",
